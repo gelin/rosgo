@@ -30,14 +30,14 @@ func getNamespace(name string) string {
 
 func qualifyNodeName(nodeName string) (string, string, error) {
 	if nodeName == "" {
-		return "", "", fmt.Errorf("Empty node name")
+		return "", "", fmt.Errorf("empty node name")
 	}
 	if nodeName[:1] == PrivateNS {
-		return "", "", fmt.Errorf("Node name should not contain '~'")
+		return "", "", fmt.Errorf("node name should not contain '~'")
 	}
 	canonName := canonicalizeName(nodeName)
 
-	var components []string
+	var components = make([]string, 0)
 	for _, c := range strings.Split(canonName, Sep) {
 		if len(c) > 0 {
 			components = append(components, c)
@@ -46,7 +46,7 @@ func qualifyNodeName(nodeName string) (string, string, error) {
 	if len(components) == 1 {
 		return GlobalNS, components[0], nil
 	} else {
-		namespace := GlobalNS + strings.Join(components[:len(components)-1], Sep)
+		namespace := GlobalNS + strings.Join(components[:len(components)-1], Sep) + "/"
 		return namespace, components[len(components)-1], nil
 	}
 }

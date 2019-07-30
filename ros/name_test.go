@@ -298,3 +298,64 @@ func TestProcessArguments(t *testing.T) {
 		t.Fail()
 	}
 }
+
+func TestQualifyNodeName(t *testing.T) {
+	var ns, name string
+	var err error
+
+	ns, name, err = qualifyNodeName("foo")
+	if err != nil {
+		t.Error(err)
+	}
+	if ns != "/" {
+		t.Error(ns)
+	}
+	if name != "foo" {
+		t.Error(name)
+	}
+
+	ns, name, err = qualifyNodeName("/foo")
+	if err != nil {
+		t.Error(err)
+	}
+	if ns != "/" {
+		t.Error(ns)
+	}
+	if name != "foo" {
+		t.Error(name)
+	}
+
+	ns, name, err = qualifyNodeName("/foo/")
+	if err != nil {
+		t.Error(err)
+	}
+	if ns != "/" {
+		t.Error(ns)
+	}
+	if name != "foo" {
+		t.Error(name)
+	}
+
+	ns, name, err = qualifyNodeName("/foo/bar")
+	if err != nil {
+		t.Error(err)
+	}
+	if ns != "/foo/" {
+		t.Error(ns)
+	}
+	if name != "bar" {
+		t.Error(name)
+	}
+
+	ns, name, err = qualifyNodeName("/foo/bar/baz")
+	if err != nil {
+		t.Error(err)
+	}
+	if ns != "/foo/bar/" {
+		t.Error(ns)
+	}
+	if name != "baz" {
+		t.Error(name)
+	}
+
+}
