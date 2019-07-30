@@ -116,12 +116,12 @@ Bar[] xva
 Bar[42] xfa
 `
 
-	ctx, e := NewMsgContext()
+	ctx, e := NewMsgContext([]string{})
 	if e != nil {
 		t.Errorf("Failed to create MsgContext.")
 	}
 	var spec *MsgSpec
-	spec, e = LoadMsgFromString(ctx, text, "foo/Foo")
+	spec, e = ctx.LoadMsgFromString(text, "foo/Foo")
 	if e != nil {
 		t.Errorf("Failed to parse: %v", e)
 	}

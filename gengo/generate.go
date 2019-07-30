@@ -8,12 +8,13 @@ import (
 var msgTemplate = `
 // Automatically generated from the message definition "{{ .FullName }}.msg"
 package {{ .Package }}
+
 import (
-    "bytes"
+	"bytes"
 {{- if .BinaryRequired }}
-    "encoding/binary"
+	"encoding/binary"
 {{- end }}
-    "github.com/akio/rosgo/ros"
+	"github.com/gelin/rosgo/ros"
 {{- range .Imports }}
 	"{{ . }}"
 {{- end }}
@@ -31,27 +32,26 @@ const (
 )
 {{- end }}
 
-
 type _Msg{{ .ShortName }} struct {
-    text string
-    name string
-    md5sum string
+	text   string
+	name   string
+	md5sum string
 }
 
 func (t *_Msg{{ .ShortName }}) Text() string {
-    return t.text
+	return t.text
 }
 
 func (t *_Msg{{ .ShortName }}) Name() string {
-    return t.name
+	return t.name
 }
 
 func (t *_Msg{{ .ShortName }}) MD5Sum() string {
-    return t.md5sum
+	return t.md5sum
 }
 
 func (t *_Msg{{ .ShortName }}) NewMessage() ros.Message {
-    m := new({{ .ShortName }})
+	m := new({{ .ShortName }})
 {{- range .Fields }}
 {{-     if .IsArray }}
 {{-         if eq .ArrayLen -1 }}
@@ -65,15 +65,15 @@ func (t *_Msg{{ .ShortName }}) NewMessage() ros.Message {
 	m.{{ .GoName }} = {{ .ZeroValue }}
 {{-     end }}
 {{- end }}
-    return m
+	return m
 }
 
 var (
-    Msg{{ .ShortName }} = &_Msg{{ .ShortName }} {
-        ` + "`" + `{{ .Text }}` + "`" + `,
-        "{{ .FullName }}",
-        "{{ .MD5Sum }}",
-    }
+	Msg{{ .ShortName }} = &_Msg{{ .ShortName }}{
+		` + "`" + `{{ .Text }}` + "`" + `,
+		"{{ .FullName }}",
+		"{{ .MD5Sum }}",
+	}
 )
 
 type {{ .ShortName }} struct {
@@ -95,188 +95,207 @@ func (m *{{ .ShortName }}) Type() ros.MessageType {
 }
 
 func (m *{{ .ShortName }}) Serialize(buf *bytes.Buffer) error {
-    var err error = nil
+	var err error = nil
 {{- range .Fields }}
 {{-     if .IsArray }}
-    binary.Write(buf, binary.LittleEndian, uint32(len(m.{{ .GoName }})))
-    for _, e := range m.{{ .GoName }} {
+	binary.Write(buf, binary.LittleEndian, uint32(len(m.{{ .GoName }})))
+	for _, e := range m.{{ .GoName }} {
 {{-         if .IsBuiltin }}
 {{-             if eq .Type "string" }}
-        binary.Write(buf, binary.LittleEndian, uint32(len([]byte(e))))
-        buf.Write([]byte(e))
+		binary.Write(buf, binary.LittleEndian, uint32(len([]byte(e))))
+		buf.Write([]byte(e))
 {{-            else }}
 {{-                if or (eq .Type "time") (eq .Type "duration") }}
-        binary.Write(buf, binary.LittleEndian, e.Sec)
-        binary.Write(buf, binary.LittleEndian, e.NSec)
+		binary.Write(buf, binary.LittleEndian, e.Sec)
+		binary.Write(buf, binary.LittleEndian, e.NSec)
 {{-                else }}
-        binary.Write(buf, binary.LittleEndian, e)
+		binary.Write(buf, binary.LittleEndian, e)
 {{-                end }}
 {{-             end }}
 {{-         else }}
-        if err = e.Serialize(buf); err != nil {
-            return err
-        }
+		if err = e.Serialize(buf); err != nil {
+			return err
+		}
 {{-         end }}
-    }
+	}
 {{-     else }}
 {{-         if .IsBuiltin }}
 {{-             if eq .Type "string" }}
-    binary.Write(buf, binary.LittleEndian, uint32(len([]byte(m.{{ .GoName }}))))
-    buf.Write([]byte(m.{{ .GoName }}))
+	binary.Write(buf, binary.LittleEndian, uint32(len([]byte(m.{{ .GoName }}))))
+	buf.Write([]byte(m.{{ .GoName }}))
 {{-             else }}
 {{-                 if or (eq .Type "time") (eq .Type "duration") }}
-    binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.Sec)
-    binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.NSec)
+	binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.Sec)
+	binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.NSec)
 {{-                 else }}
-    binary.Write(buf, binary.LittleEndian, m.{{ .GoName }})
+	binary.Write(buf, binary.LittleEndian, m.{{ .GoName }})
 {{-                 end }}
 {{-             end }}
 {{-         else }}
-    if err = m.{{ .GoName }}.Serialize(buf); err != nil {
-        return err
-    }
+	if err = m.{{ .GoName }}.Serialize(buf); err != nil {
+		return err
+	}
 {{-         end }}
 {{-     end }}
 {{- end }}
-    return err
+	return err
 }
 
-
 func (m *{{ .ShortName }}) Deserialize(buf *bytes.Reader) error {
-    var err error = nil
+	var err error = nil
 {{- range .Fields }}
 {{-    if .IsArray }}
-    {
-        var size uint32
-        if err = binary.Read(buf, binary.LittleEndian, &size); err != nil {
-            return err
-        }
+	{
+		var size uint32
+		if err = binary.Read(buf, binary.LittleEndian, &size); err != nil {
+			return err
+		}
 {{-        if lt .ArrayLen 0 }}
-        m.{{ .GoName }} = make([]{{ .GoType }}, int(size))
+		m.{{ .GoName }} = make([]{{ .GoType }}, int(size))
 {{-        end }}
-        for i := 0; i < int(size); i++ {
+		for i := 0; i < int(size); i++ {
 {{-          if .IsBuiltin }}
 {{-              if eq .Type "string" }}
-            {
-                var size uint32
-                if err = binary.Read(buf, binary.LittleEndian, &size); err != nil {
-                    return err
-                }
-                data := make([]byte, int(size))
-                if err = binary.Read(buf, binary.LittleEndian, data); err != nil {
-                    return err
-                }
-                m.{{ .GoName }})[i] = string(data)
-            }
+			{
+				var size uint32
+				if err = binary.Read(buf, binary.LittleEndian, &size); err != nil {
+					return err
+				}
+				data := make([]byte, int(size))
+				if err = binary.Read(buf, binary.LittleEndian, data); err != nil {
+					return err
+				}
+				m.{{ .GoName }})[i] = string(data)
+			}
 {{-              else }}
 {{- 					if or (eq .Type "time") (eq .Type "duration") }}
-            {
-                if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}[i].Sec); err != nil {
-                    return err
-                }
+			{
+				if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}[i].Sec); err != nil {
+					return err
+				}
 
-                if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}[i].NSec); err != nil {
-                    return err
-                }
-            }
+				if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}[i].NSec); err != nil {
+					return err
+				}
+			}
 {{-                  else }}
-            if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}[i]); err != nil {
-                return err
-            }
+			if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}[i]); err != nil {
+				return err
+			}
 {{-                  end }}
 {{-              end }}
 {{-          else }}
-            if err = m.{{ .GoName }}[i].Deserialize(buf); err != nil {
-                return err
-            }
+			if err = m.{{ .GoName }}[i].Deserialize(buf); err != nil {
+				return err
+			}
 {{-      	end }}
-        }
-    }
+		}
+	}
 {{-    else }}
 {{-        if .IsBuiltin }}
 {{-            if eq .Type "string" }}
-    {
-        var size uint32
-        if err = binary.Read(buf, binary.LittleEndian, &size); err != nil {
-            return err
-        }
-        data := make([]byte, int(size))
-        if err = binary.Read(buf, binary.LittleEndian, data); err != nil {
-            return err
-        }
-        m.{{ .GoName }} = string(data)
-    }
+	{
+		var size uint32
+		if err = binary.Read(buf, binary.LittleEndian, &size); err != nil {
+			return err
+		}
+		data := make([]byte, int(size))
+		if err = binary.Read(buf, binary.LittleEndian, data); err != nil {
+			return err
+		}
+		m.{{ .GoName }} = string(data)
+	}
 {{-            else }}
 {{-            		if or (eq .Type "time") (eq .Type "duration") }}
-    {
-        if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}.Sec); err != nil {
-            return err
-        }
+	{
+		if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}.Sec); err != nil {
+			return err
+		}
 
-        if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}.NSec); err != nil {
-            return err
-        }
-    }
+		if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}.NSec); err != nil {
+			return err
+		}
+	}
 {{-            		else }}
-    if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}); err != nil {
-        return err
-    }
+	if err = binary.Read(buf, binary.LittleEndian, &m.{{ .GoName }}); err != nil {
+		return err
+	}
 {{-         			end }}
 {{-            end }}
 {{-        else }}
-    if err = m.{{ .GoName }}.Deserialize(buf); err != nil {
-        return err
-    }
+	if err = m.{{ .GoName }}.Deserialize(buf); err != nil {
+		return err
+	}
 {{-    	  end }}
 {{-    end }}
 {{- end }}
-    return err
+	return err
 }
 `
 
 var srvTemplate = `
 // Automatically generated from the message definition "{{ .FullName }}.srv"
 package {{ .Package }}
+
 import (
-    "github.com/akio/rosgo/ros"
+	"github.com/gelin/rosgo/ros"
 )
 
 // Service type metadata
 type _Srv{{ .ShortName }} struct {
-    name string
-    md5sum string
-    text string
-    reqType ros.MessageType
-    resType ros.MessageType
+	name    string
+	md5sum  string
+	text    string
+	reqType ros.MessageType
+	resType ros.MessageType
 }
 
-func (t *_Srv{{ .ShortName }}) Name() string { return t.name }
-func (t *_Srv{{ .ShortName }}) MD5Sum() string { return t.md5sum }
-func (t *_Srv{{ .ShortName }}) Text() string { return t.text }
-func (t *_Srv{{ .ShortName }}) RequestType() ros.MessageType { return t.reqType }
-func (t *_Srv{{ .ShortName }}) ResponseType() ros.MessageType { return t.resType }
+func (t *_Srv{{ .ShortName }}) Name() string { 
+	return t.name 
+}
+
+func (t *_Srv{{ .ShortName }}) MD5Sum() string { 
+	return t.md5sum 
+}
+
+func (t *_Srv{{ .ShortName }}) Text() string { 
+	return t.text 
+}
+
+func (t *_Srv{{ .ShortName }}) RequestType() ros.MessageType { 
+	return t.reqType 
+}
+
+func (t *_Srv{{ .ShortName }}) ResponseType() ros.MessageType { 
+	return t.resType 
+}
+
 func (t *_Srv{{ .ShortName }}) NewService() ros.Service {
-    return new({{ .ShortName }})
+	return new({{ .ShortName }})
 }
 
 var (
-    Srv{{ .ShortName }} = &_Srv{{ .ShortName }} {
-        "{{ .FullName }}",
-        "{{ .MD5Sum }}",
-        ` + "`" + `{{ .Text }}` + "`" + `,
-        Msg{{ .ShortName }}Request,
-        Msg{{ .ShortName }}Response,
-    }
+	Srv{{ .ShortName }} = &_Srv{{ .ShortName }} {
+		"{{ .FullName }}",
+		"{{ .MD5Sum }}",
+		` + "`" + `{{ .Text }}` + "`" + `,
+		Msg{{ .ShortName }}Request,
+		Msg{{ .ShortName }}Response,
+	}
 )
 
-
 type {{ .ShortName }} struct {
-    Request {{ .ShortName }}Request
-    Response {{ .ShortName }}Response
+	Request  {{ .ShortName }}Request
+	Response {{ .ShortName }}Response
 }
 
-func (s *{{ .ShortName }}) ReqMessage() ros.Message { return &s.Request }
-func (s *{{ .ShortName }}) ResMessage() ros.Message { return &s.Response }
+func (s *{{ .ShortName }}) ReqMessage() ros.Message { 
+	return &s.Request 
+}
+
+func (s *{{ .ShortName }}) ResMessage() ros.Message { 
+	return &s.Response 
+}
 `
 
 type MsgGen struct {
