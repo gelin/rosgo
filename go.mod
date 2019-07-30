@@ -1,4 +1,4 @@
-module rosgo
+module github.com/gelin/rosgo
 
 go 1.12
 
