@@ -10,7 +10,7 @@ import (
 
 func writeCode(fullname string, code string) error {
 	nameComponents := strings.Split(fullname, "/")
-	pkgDir := filepath.Join("vendor", nameComponents[0])
+	pkgDir := nameComponents[0]
 	if _, err := os.Stat(pkgDir); os.IsNotExist(err) {
 		err = os.MkdirAll(pkgDir, os.ModeDir|os.FileMode(0775))
 		if err != nil {
@@ -23,14 +23,6 @@ func writeCode(fullname string, code string) error {
 }
 
 func main() {
-	if _, err := os.Stat("vendor"); os.IsNotExist(err) {
-		err = os.Mkdir("vendor", os.ModeDir|os.FileMode(0775))
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(-1)
-		}
-	}
-
 	if len(os.Args) < 3 {
 		fmt.Println("USAGE: gengo msg|srv <NAME> [<FILE>]")
 		os.Exit(-1)

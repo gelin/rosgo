@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"go/format"
 	"text/template"
 )
 
@@ -98,18 +99,18 @@ func (m *{{ .ShortName }}) Serialize(buf *bytes.Buffer) error {
 	var err error = nil
 {{- range .Fields }}
 {{-     if .IsArray }}
-	binary.Write(buf, binary.LittleEndian, uint32(len(m.{{ .GoName }})))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(len(m.{{ .GoName }})))
 	for _, e := range m.{{ .GoName }} {
 {{-         if .IsBuiltin }}
 {{-             if eq .Type "string" }}
-		binary.Write(buf, binary.LittleEndian, uint32(len([]byte(e))))
-		buf.Write([]byte(e))
+		_ = binary.Write(buf, binary.LittleEndian, uint32(len([]byte(e))))
+		_, _ = buf.Write([]byte(e))
 {{-            else }}
 {{-                if or (eq .Type "time") (eq .Type "duration") }}
-		binary.Write(buf, binary.LittleEndian, e.Sec)
-		binary.Write(buf, binary.LittleEndian, e.NSec)
+		_ = binary.Write(buf, binary.LittleEndian, e.Sec)
+		_ = binary.Write(buf, binary.LittleEndian, e.NSec)
 {{-                else }}
-		binary.Write(buf, binary.LittleEndian, e)
+		_ = binary.Write(buf, binary.LittleEndian, e)
 {{-                end }}
 {{-             end }}
 {{-         else }}
@@ -121,14 +122,14 @@ func (m *{{ .ShortName }}) Serialize(buf *bytes.Buffer) error {
 {{-     else }}
 {{-         if .IsBuiltin }}
 {{-             if eq .Type "string" }}
-	binary.Write(buf, binary.LittleEndian, uint32(len([]byte(m.{{ .GoName }}))))
-	buf.Write([]byte(m.{{ .GoName }}))
+	_ = binary.Write(buf, binary.LittleEndian, uint32(len([]byte(m.{{ .GoName }}))))
+	_, _ = buf.Write([]byte(m.{{ .GoName }}))
 {{-             else }}
 {{-                 if or (eq .Type "time") (eq .Type "duration") }}
-	binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.Sec)
-	binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.NSec)
+	_ = binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.Sec)
+	_ = binary.Write(buf, binary.LittleEndian, m.{{ .GoName }}.NSec)
 {{-                 else }}
-	binary.Write(buf, binary.LittleEndian, m.{{ .GoName }})
+	_ = binary.Write(buf, binary.LittleEndian, m.{{ .GoName }})
 {{-                 end }}
 {{-             end }}
 {{-         else }}
@@ -165,7 +166,7 @@ func (m *{{ .ShortName }}) Deserialize(buf *bytes.Reader) error {
 				if err = binary.Read(buf, binary.LittleEndian, data); err != nil {
 					return err
 				}
-				m.{{ .GoName }})[i] = string(data)
+				m.{{ .GoName }}[i] = string(data)
 			}
 {{-              else }}
 {{- 					if or (eq .Type "time") (eq .Type "duration") }}
@@ -346,7 +347,13 @@ func GenerateMessage(context *MsgContext, spec *MsgSpec) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return buffer.String(), err
+
+	result, err := format.Source(buffer.Bytes())
+	if err != nil {
+		return "", err
+	}
+
+	return string(result), err
 }
 
 func GenerateService(context *MsgContext, spec *SrvSpec) (string, string, string, error) {
@@ -370,5 +377,11 @@ func GenerateService(context *MsgContext, spec *SrvSpec) (string, string, string
 	if err != nil {
 		return "", "", "", err
 	}
-	return buffer.String(), reqCode, resCode, err
+
+	result, err := format.Source(buffer.Bytes())
+	if err != nil {
+		return "", "", "", err
+	}
+
+	return string(result), reqCode, resCode, err
 }
