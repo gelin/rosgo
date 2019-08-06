@@ -27,7 +27,13 @@ To use this fork, add the following to your `go.mod` file (you should use Go mod
 ```
 replace github.com/akio/rosgo => github.com/gelin/rosgo v0.0.4
 
-require github.com/gelin/rosgo v0.0.4
+require github.com/akio/rosgo v0.0.0-20181001005218-9bef6ddefa32
+```
+
+And continue to use import of the upstream package:
+
+```go
+import "github.com/akio/rosgo/ros"
 ```
 
 ## See also
