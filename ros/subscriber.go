@@ -174,7 +174,7 @@ func startRemotePublisherConn(logger Logger,
 	var resHeaders []header
 	resHeaders, err = readConnectionHeader(conn)
 	if err != nil {
-		logger.Fatal("Failed to read reasponse header.")
+		logger.Fatal("Failed to read response header.")
 	}
 	logger.Debug("TCPROS Response Header:")
 	resHeaderMap := make(map[string]string)
@@ -183,7 +183,7 @@ func startRemotePublisherConn(logger Logger,
 		logger.Debugf("  `%s` = `%s`", h.key, h.value)
 	}
 	if resHeaderMap["type"] != msgType || resHeaderMap["md5sum"] != md5sum {
-		logger.Fatalf("Incomatible message type!")
+		logger.Fatalf("Incompatible message type!")
 	}
 	logger.Debug("Start receiving messages...")
 	event := MessageEvent{ // Event struct to be sent with each message.
@@ -200,7 +200,7 @@ func startRemotePublisherConn(logger Logger,
 		case <-quitChan:
 			return
 		default:
-			conn.SetDeadline(time.Now().Add(10 * time.Millisecond))
+			_ = conn.SetDeadline(time.Now().Add(10 * time.Millisecond))
 			if readingSize {
 				//logger.Debug("Reading message size...")
 				err := binary.Read(conn, binary.LittleEndian, &msgSize)

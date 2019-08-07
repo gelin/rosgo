@@ -79,7 +79,7 @@ func (pub *defaultPublisher) start(wg *sync.WaitGroup) {
 			}
 		case err := <-pub.listenerErrorChan:
 			logger.Debug("Listener closed unexpectedly: %s", err)
-			pub.listener.Close()
+			_ = pub.listener.Close()
 			return
 		case err := <-pub.sessionErrorChan:
 			logger.Error(err)
@@ -93,7 +93,7 @@ func (pub *defaultPublisher) start(wg *sync.WaitGroup) {
 			}
 		case <-pub.shutdownChan:
 			logger.Debug("defaultPublisher.start Receive shutdownChan")
-			pub.listener.Close()
+			_ = pub.listener.Close()
 			logger.Debug("defaultPublisher.start closed listener")
 			_, err := callRosApi(pub.node.masterUri, "unregisterPublisher", pub.node.qualifiedName, pub.topic, pub.node.xmlrpcUri)
 			if err != nil {
@@ -226,18 +226,18 @@ func (session *remoteSubscriberSession) start() {
 			if e, ok := err.(error); ok {
 				session.errorChan <- &remoteSubscriberSessionError{session, e}
 			} else {
-				e = fmt.Errorf("Unkonwn error value")
+				e = fmt.Errorf("unknown error value")
 				session.errorChan <- &remoteSubscriberSessionError{session, e}
 			}
 		} else {
-			e := fmt.Errorf("Normal exit")
+			e := fmt.Errorf("normal exit")
 			session.errorChan <- &remoteSubscriberSessionError{session, e}
 		}
 	}()
 	// 1. Read connection header
 	headers, err := readConnectionHeader(session.conn)
 	if err != nil {
-		panic(errors.New("Failed to read connection header."))
+		panic(errors.New("failed to read connection header"))
 	}
 	logger.Debug("TCPROS Connection Header:")
 	headerMap := make(map[string]string)
@@ -245,15 +245,15 @@ func (session *remoteSubscriberSession) start() {
 		headerMap[h.key] = h.value
 		logger.Debugf("  `%s` = `%s`", h.key, h.value)
 	}
-	if headerMap["type"] != session.typeName || headerMap["md5sum"] != session.md5sum {
-		panic(errors.New("Incomatible message type!"))
+	if !session.isValidMessageType(headerMap) {
+		panic(errors.New("incompatible message type"))
 	}
 	ssp.subName = headerMap["callerid"]
 	if session.connectCallback != nil {
 		go session.connectCallback(ssp)
 	}
 
-	// 2. Return reponse header
+	// 2. Return response header
 	var resHeaders []header
 	resHeaders = append(resHeaders, header{"message_definition", session.typeText})
 	resHeaders = append(resHeaders, header{"callerid", session.nodeId})
@@ -267,7 +267,7 @@ func (session *remoteSubscriberSession) start() {
 	}
 	err = writeConnectionHeader(resHeaders, session.conn)
 	if err != nil {
-		panic(errors.New("Failed to write response header."))
+		panic(errors.New("failed to write response header"))
 	}
 
 	// 3. Start sending message
@@ -292,7 +292,7 @@ func (session *remoteSubscriberSession) start() {
 				msg := queue.Front().Value.([]byte)
 				queue.Remove(queue.Front())
 				logger.Debug(hex.EncodeToString(msg))
-				session.conn.SetDeadline(time.Now().Add(10 * time.Millisecond))
+				_ = session.conn.SetDeadline(time.Now().Add(10 * time.Millisecond))
 				size := uint32(len(msg))
 				if err := binary.Write(session.conn, binary.LittleEndian, size); err != nil {
 					if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
@@ -304,7 +304,7 @@ func (session *remoteSubscriberSession) start() {
 					}
 				}
 				logger.Debug(len(msg))
-				session.conn.SetDeadline(time.Now().Add(10 * time.Millisecond))
+				_ = session.conn.SetDeadline(time.Now().Add(10 * time.Millisecond))
 				if _, err := session.conn.Write(msg); err != nil {
 					if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
 						logger.Debug("timeout")
@@ -318,4 +318,16 @@ func (session *remoteSubscriberSession) start() {
 			}
 		}
 	}
+}
+
+// isValidMessageType verifies this request headers (as headerMap) contains correct messaga type.
+// Returns true if types matches or the headers request subscription to any type ("*").
+// See: http://docs.ros.org/melodic/api/rospy/html/rospy.impl.tcpros_pubsub-pysrc.html#TCPROSHandler.topic_connection_handler
+func (session *remoteSubscriberSession) isValidMessageType(headerMap map[string]string) bool {
+	md5sum, _ := headerMap["md5sum"]
+	typeName, hasTypeName := headerMap["type"]
+
+	validMd5sum := md5sum == session.md5sum || md5sum == TopicAnyType
+	validTypeName := typeName == session.typeName || (validMd5sum && (!hasTypeName || typeName == TopicAnyType))
+	return validMd5sum && validTypeName
 }
